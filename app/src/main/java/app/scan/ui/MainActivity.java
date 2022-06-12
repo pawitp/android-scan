@@ -1,15 +1,15 @@
 package app.scan.ui;
 
-import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
-
+import android.app.Activity;
 import android.app.ProgressDialog;
-import android.content.ContentValues;
 import android.content.Intent;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.text.InputType;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -18,23 +18,31 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 
-import org.apache.commons.io.IOUtils;
-
-import java.io.OutputStream;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 
 import app.scan.R;
 import app.scan.input.ScanCallback;
 import app.scan.input.ScanDriver;
 import app.scan.input.ScanRequest;
 import app.scan.output.MediaStoreOutput;
+import jpegkit.Jpeg;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+
+    private static final int REQUEST_CROP = 1;
 
     private Preferences mPref;
     private MediaStoreOutput mOutput;
     private Spinner mSizeSpinner;
     private Spinner mQualitySpinner;
     private Spinner mColorSpinner;
+
+    // Need to store image data because we need access to it
+    // after the crop activity returns
+    private byte[] mImageBinary;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,6 +83,18 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CROP) {
+            if (resultCode == Activity.RESULT_OK) {
+                int rotation = data.getIntExtra("rotation", 0);
+                Rect cropRect = data.getParcelableExtra("crop_rect");
+                saveImage(mImageBinary, rotation, cropRect);
+            }
+        }
+    }
+
     public void startScan(View view) {
         final ProgressDialog progressDialog = ProgressDialog.show(this, "Scanning", "Scanning...");
         ScanDriver driver = new ScanDriver(mPref.getAddress());
@@ -85,9 +105,13 @@ public class MainActivity extends AppCompatActivity {
         driver.startScan(request, new ScanCallback() {
             @Override
             public void onComplete(byte[] binary) {
+                // Do bitmap decoding in background thread
+                Bitmap bitmap = BitmapFactory.decodeByteArray(binary, 0, binary.length);
+
                 MainActivity.this.runOnUiThread(() -> {
                     progressDialog.cancel();
-                    saveToStorage(binary);
+                    mImageBinary = binary;
+                    startCrop(bitmap);
                 });
             }
 
@@ -95,24 +119,34 @@ public class MainActivity extends AppCompatActivity {
             public void onError(Throwable t) {
                 MainActivity.this.runOnUiThread(() -> {
                     progressDialog.cancel();
-                    showErrorDialog(t);
+                    ErrorDialog.show(MainActivity.this, t);
                 });
             }
         });
     }
 
-    // Save image to storage with scoped storage support
-    private void saveToStorage(byte[] binary) {
-        try {
-            Uri contentUri = mOutput.saveToStorage(binary);
+    private void startCrop(Bitmap bitmap) {
+        CropActivity.setBitmap(bitmap);
+        Intent intent = new Intent(this, CropActivity.class);
+        startActivityForResult(intent, REQUEST_CROP);
+    }
 
-            // Open in default viewer
+    private void saveImage(byte[] binary, int rotation, Rect cropRect) {
+        try {
+            // Lossless rotation and cropping with Jpegkit
+            Log.v(TAG, "Rotate " + rotation + " Crop " + cropRect);
+            Jpeg jpeg = new Jpeg(binary);
+            jpeg.crop(cropRect);
+            jpeg.rotate(rotation);
+
+            // Save to external storage and show in default image viewer
+            Uri contentUri = mOutput.saveToStorage(jpeg.getJpegBytes());
             Intent intent = new Intent();
             intent.setAction(Intent.ACTION_VIEW);
             intent.setDataAndType(contentUri, "image/*");
             startActivity(intent);
         } catch (Exception e) {
-            showErrorDialog(e);
+            ErrorDialog.show(this, e);
         }
     }
 
@@ -138,11 +172,4 @@ public class MainActivity extends AppCompatActivity {
         spinner.setAdapter(adapter);
     }
 
-    private void showErrorDialog(Throwable t) {
-        new AlertDialog.Builder(this)
-                .setTitle(t.getClass().getSimpleName())
-                .setMessage(t.getMessage())
-                .setPositiveButton("OK", (dialog, which) -> dialog.dismiss())
-                .show();
-    }
 }

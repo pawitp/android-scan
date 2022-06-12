@@ -1,6 +1,9 @@
 <resources>
     <string name="app_name">Scan</string>
+    <string name="title_crop">Crop</string>
     <string name="action_settings">Settings</string>
+    <string name="action_rotate">Rotate</string>
+    <string name="action_save">Save</string>
 
     <string-array name="size_array">
         <item>A4</item>
