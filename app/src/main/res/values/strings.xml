@@ -1,0 +1,19 @@
+<resources>
+    <string name="app_name">Scan</string>
+    <string name="action_settings">Settings</string>
+
+    <string-array name="size_array">
+        <item>A4</item>
+        <item>Full</item>
+    </string-array>
+
+    <string-array name="quality_array">
+        <item>Normal</item>
+        <item>High</item>
+    </string-array>
+
+    <string-array name="color_array">
+        <item>Color</item>
+        <item>Grayscale</item>
+    </string-array>
+</resources>
