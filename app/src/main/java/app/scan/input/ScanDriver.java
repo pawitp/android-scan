@@ -16,6 +16,7 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 
+import app.scan.process.ScannedImage;
 import app.scan.util.SslUtil;
 
 public class ScanDriver {
@@ -39,7 +40,7 @@ public class ScanDriver {
                 String binaryPath = queryBinaryPath(jobPath);
                 Log.v(TAG, "Binary Path: " + jobPath);
                 byte[] binary = downloadBinary(binaryPath);
-                callback.onComplete(binary);
+                callback.onComplete(ScannedImage.fromJpeg(binary));
             } catch (Exception e) {
                 Log.e(TAG, "Error scanning", e);
                 callback.onError(e);
