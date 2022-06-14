@@ -11,8 +11,10 @@
     </string-array>
 
     <string-array name="quality_array">
-        <item>Normal</item>
-        <item>High</item>
+        <item>Normal (JPEG 65)</item>
+        <item>High (JPEG 85)</item>
+        <item>Very High (JPEG 95)</item>
+        <item>Lossless (PNG)</item>
     </string-array>
 
     <string-array name="color_array">

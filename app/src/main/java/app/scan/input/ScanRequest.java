@@ -10,7 +10,9 @@ public class ScanRequest {
 
     private static int[] COMPRESSION_FACTORS = new int[]{
             35, // "Normal" quality (JPEG 65)
-            15  // "High" quality (JPEG 85)
+            15, // "High" quality (JPEG 85)
+            5,  // "Very High" quality (JPEG 95)
+            0,  // Placeholder for lossless (see mFormat)
     };
 
     private static String[] COLOR_SPACES = new String[]{
@@ -18,10 +20,11 @@ public class ScanRequest {
             "Gray"
     };
 
-    private int mWidth;
-    private int mHeight;
-    private int mCompressionFactor;
-    private String mColorSpace;
+    private final int mWidth;
+    private final int mHeight;
+    private final int mCompressionFactor;
+    private final String mColorSpace;
+    private final String mFormat;
 
     public ScanRequest(int sizeId, int qualityId, int colorId) {
         int[] size = SIZES[sizeId];
@@ -29,6 +32,7 @@ public class ScanRequest {
         mHeight = size[1];
         mCompressionFactor = COMPRESSION_FACTORS[qualityId];
         mColorSpace = COLOR_SPACES[colorId];
+        mFormat = mCompressionFactor == 0 ? "Raw" : "Jpeg";
     }
 
     public String toRequestXml() {
@@ -40,7 +44,7 @@ public class ScanRequest {
                 "   <Width>" + mWidth + "</Width>\n" +
                 "   <YStart>0</YStart>\n" +
                 "   <Height>" + mHeight + "</Height>\n" +
-                "   <Format>Jpeg</Format>\n" +
+                "   <Format>" + mFormat + "</Format>\n" +
                 "   <CompressionQFactor>" + mCompressionFactor + "</CompressionQFactor>\n" +
                 "   <ColorSpace>" + mColorSpace + "</ColorSpace>\n" +
                 "   <BitDepth>8</BitDepth>\n" +

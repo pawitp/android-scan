@@ -5,13 +5,14 @@ A simple application to scan documents using wireless scanners on Android.
 ![crop_page](https://user-images.githubusercontent.com/25575/173224156-af03d008-debe-4aac-b28a-e5dd4e9ccc80.png)
 
 ## Features
- - Losslessly crop and rotate the scanned image
+ - Crop and rotate the scanned image without JPEG recompression
+ - Support JPEG (encoded by the scanner) or PNG (lossless)
 
 ## Limitations
  - Works only with HP wireless printers/scanners (tested on HP Deskjet Ink Advantage 3545)
- - Scans are only in JPEG, encoded by the scanner
 
 ## Libraries
 This project makes use of the following open source libraries:
  - [Android Image Cropper](https://github.com/ArthurHub/Android-Image-Cropper) - UI for cropping
  - [JpegKit](https://github.com/CameraKit/jpegkit-android) - Losslessly crop and rotate JPEG images
+ - [PNGJ](https://github.com/leonbloy/pngj) - Encode PNG images

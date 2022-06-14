@@ -15,4 +15,8 @@ public interface ScannedImage {
         return new JpegScannedImage(binary);
     }
 
+    static ScannedImage fromRaw(byte[] binary, int width, int height) {
+        return new BitmapScannedImage(binary, width, height);
+    }
+
 }

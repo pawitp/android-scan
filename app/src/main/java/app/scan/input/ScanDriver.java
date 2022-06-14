@@ -3,21 +3,16 @@ package app.scan.input;
 import android.util.Log;
 
 import org.apache.commons.io.IOUtils;
-import org.w3c.dom.NodeList;
-import org.xml.sax.InputSource;
+import org.w3c.dom.Document;
 
 import java.io.IOException;
-import java.io.StringReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
-import javax.xml.xpath.XPath;
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathFactory;
-
 import app.scan.process.ScannedImage;
 import app.scan.util.SslUtil;
+import app.scan.util.XmlUtil;
 
 public class ScanDriver {
 
@@ -37,12 +32,13 @@ public class ScanDriver {
             try {
                 String jobPath = initiateScanRequest(request.toRequestXml());
                 Log.v(TAG, "Job Path: " + jobPath);
-                String binaryPath = queryBinaryPath(jobPath);
-                Log.v(TAG, "Binary Path: " + jobPath);
-                byte[] binary = downloadBinary(binaryPath);
-                callback.onComplete(ScannedImage.fromJpeg(binary));
+                ImageMetadata metadata = queryMetadata(jobPath);
+                Log.v(TAG, "Binary Path: " + metadata.path);
+                byte[] binary = downloadBinary(metadata.path);
+                ScannedImage image = metadata.isRaw ? ScannedImage.fromRaw(binary, metadata.width, metadata.height)
+                        : ScannedImage.fromJpeg(binary);
+                callback.onComplete(image);
             } catch (Exception e) {
-                Log.e(TAG, "Error scanning", e);
                 callback.onError(e);
             }
         }).start();
@@ -73,7 +69,7 @@ public class ScanDriver {
         }
     }
 
-    private String queryBinaryPath(String jobPath) throws Exception {
+    private ImageMetadata queryMetadata(String jobPath) throws Exception {
         URL url = new URL("https://" + mAddress + jobPath);
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         try {
@@ -81,12 +77,14 @@ public class ScanDriver {
             urlConnection.setConnectTimeout(5000);
             String result = IOUtils.toString(urlConnection.getInputStream(), StandardCharsets.UTF_8);
 
-            // Parse BinaryURL from XML
-            XPathFactory factory = XPathFactory.newInstance();
-            XPath xPath = factory.newXPath();
-            NodeList urls = (NodeList) xPath.evaluate("//*[\"BinaryURL\"=local-name()]",
-                    new InputSource(new StringReader(result)), XPathConstants.NODESET);
-            return urls.item(0).getTextContent();
+            // Parse metadata from XML
+            Document document = XmlUtil.parseString(result);
+            String binaryPath = XmlUtil.evaluateXPath("//*[\"BinaryURL\"=local-name()]", document);
+            int width = Integer.parseInt(XmlUtil.evaluateXPath("//*[\"ImageWidth\"=local-name()]", document));
+            int height = Integer.parseInt(XmlUtil.evaluateXPath("//*[\"ImageHeight\"=local-name()]", document));
+            String format = XmlUtil.evaluateXPath("//*[\"Format\"=local-name()]", document);
+
+            return new ImageMetadata(binaryPath, width, height, "Raw".equals(format));
         } finally {
             urlConnection.disconnect();
         }
