@@ -5,13 +5,14 @@ import android.util.Log;
 import org.apache.commons.io.IOUtils;
 import org.w3c.dom.Document;
 
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 import app.scan.process.ScannedImage;
-import app.scan.util.SslUtil;
 import app.scan.util.XmlUtil;
 
 public class ScanDriver {
@@ -46,10 +47,9 @@ public class ScanDriver {
 
     // Make scan request, return URL path of job
     private String initiateScanRequest(String requestXml) throws Exception {
-        URL url = new URL("https://" + mAddress + "/Scan/Jobs");
+        URL url = new URL("http://" + mAddress + ":8080/Scan/Jobs");
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         try {
-            SslUtil.setInsecureHttpsConnection(urlConnection);
             urlConnection.setConnectTimeout(5000);
             byte[] requestBytes = requestXml.getBytes(StandardCharsets.UTF_8);
             urlConnection.setDoOutput(true);
@@ -58,7 +58,7 @@ public class ScanDriver {
             urlConnection.getOutputStream().write(requestBytes);
 
             if (urlConnection.getResponseCode() == 201) {
-                // Ignore hostname as the HTTP URL will be returned even if HTTPS is used
+                // Ignore hostname as the returned hostname/protocol may not match the one we used
                 URL responseUrl = new URL(urlConnection.getHeaderField("Location"));
                 return responseUrl.getPath();
             } else {
@@ -70,10 +70,9 @@ public class ScanDriver {
     }
 
     private ImageMetadata queryMetadata(String jobPath) throws Exception {
-        URL url = new URL("https://" + mAddress + jobPath);
+        URL url = new URL("http://" + mAddress + ":8080" + jobPath);
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         try {
-            SslUtil.setInsecureHttpsConnection(urlConnection);
             urlConnection.setConnectTimeout(5000);
             String result = IOUtils.toString(urlConnection.getInputStream(), StandardCharsets.UTF_8);
 
@@ -91,10 +90,9 @@ public class ScanDriver {
     }
 
     private byte[] downloadBinary(String binaryPath) throws Exception {
-        URL url = new URL("https://" + mAddress + binaryPath);
+        URL url = new URL("http://" + mAddress + ":8080" + binaryPath);
         HttpURLConnection urlConnection = (HttpURLConnection) url.openConnection();
         try {
-            SslUtil.setInsecureHttpsConnection(urlConnection);
             urlConnection.setConnectTimeout(5000);
             return IOUtils.toByteArray(urlConnection.getInputStream());
         } finally {
